@@ -5,8 +5,10 @@ Authors: Oliver Nash
 -/
 module
 
+public import Mathlib.LinearAlgebra.Matrix.Dual
 public import Mathlib.LinearAlgebra.RootSystem.Base
 public import Mathlib.LinearAlgebra.RootSystem.Chain
+public import Mathlib.GroupTheory.Perm.Cycle.Concrete
 public import Mathlib.LinearAlgebra.RootSystem.Finite.Lemmas
 
 /-!
@@ -307,6 +309,26 @@ lemma linearIndependent_short_long :
 abbrev allCoeffs : List (Fin 2 → ℤ) :=
   [![0, 1], ![0, -1], ![1, 0], ![-1, 0], ![1, 1], ![-1, -1],
     ![2, 1], ![-2, -1], ![3, 1], ![-3, -1], ![3, 2], ![-3, -2]]
+
+/-- The coefficients of each coroot in the `𝔤₂` root pairing, relative to the base. -/
+def allCocoeffs : List (Fin 2 → ℤ) :=
+  [![0, 1], ![0, -1], ![1, 0], ![-1, 0], ![1, 3], ![-1, -3],
+    ![2, 3], ![-2, -3], ![1, 1], ![-1, -1], ![1, 2], ![-1, -2]]
+
+/-- The Weyl group permutation associated to each root / coroot of an embedded `𝔤₂` root pairing. -/
+def allPerms : Fin 12 → Fin 12 ≃ Fin 12 :=
+  ![c[0,  1] * c[2,  4] * c[3, 5] * c[8, 10] * c[9, 11],
+    c[0,  1] * c[2,  4] * c[3, 5] * c[8, 10] * c[9, 11],
+    c[0,  8] * c[1,  9] * c[2, 3] * c[4,  6] * c[5,  7],
+    c[0,  8] * c[1,  9] * c[2, 3] * c[4,  6] * c[5,  7],
+    c[0, 11] * c[1, 10] * c[2, 6] * c[3,  7] * c[4,  5],
+    c[0, 11] * c[1, 10] * c[2, 6] * c[3,  7] * c[4,  5],
+    c[2,  5] * c[3,  4] * c[6, 7] * c[8, 11] * c[9, 10],
+    c[2,  5] * c[3,  4] * c[6, 7] * c[8, 11] * c[9, 10],
+    c[0, 10] * c[1, 11] * c[2, 7] * c[3,  6] * c[8,  9],
+    c[0, 10] * c[1, 11] * c[2, 7] * c[3,  6] * c[8,  9],
+    c[0,  9] * c[1,  8] * c[4, 7] * c[5,  6] * c[10, 11],
+    c[0,  9] * c[1,  8] * c[4, 7] * c[5,  6] * c[10, 11]]
 
 lemma allRoots_eq_map_allCoeffs :
     allRoots P = allCoeffs.map (Fintype.linearCombination ℤ ![shortRoot P, longRoot P]) := by
@@ -621,5 +643,83 @@ lemma span_eq_rootSpan_int {i j : ι} (hi : i ∈ b.support) (hj : j ∈ b.suppo
     b.span_int_root_support]
 
 end IsG2
+
+section Concrete
+
+variable (R)
+variable [CharZero R]
+
+/-
+-- Probably not really the right lemma
+@[simp]
+lemma bar {ι R : Type*} [CommRing R] (f : ι → ℤ) (z : ℤ) :
+    (z : R) • (Int.cast (R := R) ∘ f) = Int.cast ∘ (z • f) := by
+  ext; simp
+
+-- Do we really want this? Seems awfully specific.
+lemma baz {ι R : Type*} [AddGroupWithOne R] (f g : ι → ℤ) :
+    Int.cast (R := R) ∘ (f - g) = Int.cast ∘ f - Int.cast ∘ g :=
+  map_comp_sub (Int.castAddHom R) f g
+-/
+
+-- The proofs below are terrible `decide`-based. Once these are rewritten we can drop this bump.
+set_option maxHeartbeats 1000000
+
+open EmbeddedG2 in
+/-- A concrete model of the `𝔤₂` root system. -/
+def g₂ : RootPairing (Fin 12) R (Fin 2 → R) (Fin 2 → R) where
+  __ := !![(2 : R), -3; -1, 2].piEquivDual
+    ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+  root := .trans ⟨allCoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
+  coroot := .trans ⟨allCocoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
+  root_coroot_two i := by
+    suffices (↑) ∘ allCocoeffs[i] ⬝ᵥ !![(2 : R), -3; -1, 2].mulVec ((↑) ∘ allCoeffs[i]) = 2 by
+      simpa using this
+    have : (↑) ∘ allCocoeffs[i] ⬝ᵥ !![(2 : R), -3; -1, 2].mulVec ((↑) ∘ allCoeffs[i]) =
+        allCocoeffs[i] ⬝ᵥ !![2, -3; -1, 2].mulVec allCoeffs[i] := by aesop
+    rw [this, ← Int.cast_two (R := R), Int.cast_inj]
+    fin_cases i <;> decide
+  reflectionPerm := allPerms
+  reflectionPerm_root i j := by
+    let e := !![(2 : R), -3; -1, 2].piEquivDual
+      ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+    let eZ := !![2, -3; -1, 2].piEquivDual
+      ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+    suffices Int.cast (R := R) ∘ allCoeffs[j] -
+        e ((↑) ∘ allCoeffs[j]) ((↑) ∘ allCocoeffs[i]) • (↑) ∘ allCoeffs[i] =
+        (↑) ∘ allCoeffs[allPerms i j] by
+      change _ - e _ _ • _ = _
+      simpa
+    have : Int.cast (R := R) ∘ allCoeffs[j] -
+        e ((↑) ∘ allCoeffs[j]) ((↑) ∘ allCocoeffs[i]) • (↑) ∘ allCoeffs[i] =
+        (↑) ∘ (allCoeffs[j] - eZ allCoeffs[j] allCocoeffs[i] • allCoeffs[i]) := by
+      aesop
+    rw [this, Int.cast_injective.comp_left.eq_iff]
+    fin_cases i <;> fin_cases j <;> decide
+  reflectionPerm_coroot i j := by
+    let e := !![(2 : R), -3; -1, 2].piEquivDual
+      ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+    let eZ := !![2, -3; -1, 2].piEquivDual
+      ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+    suffices Int.cast (R := R) ∘ allCocoeffs[j] -
+        e ((↑) ∘ allCoeffs[i]) ((↑) ∘ allCocoeffs[j]) • (↑) ∘ allCocoeffs[i] =
+        (↑) ∘ allCocoeffs[allPerms i j] by
+      change _ - e _ _ • _ = _
+      simpa
+    have : Int.cast (R := R) ∘ allCocoeffs[j] -
+        e ((↑) ∘ allCoeffs[i]) ((↑) ∘ allCocoeffs[j]) • (↑) ∘ allCocoeffs[i] =
+        (↑) ∘ (allCocoeffs[j] - eZ allCoeffs[i] allCocoeffs[j] • allCocoeffs[i]) := by
+      aesop
+    rw [this, Int.cast_injective.comp_left.eq_iff]
+    fin_cases i <;> fin_cases j <;> decide
+
+proof_wanted isRootSystem_g₂ : (g₂ R).IsRootSystem
+proof_wanted isReduced_g₂ : (g₂ R).IsReduced
+proof_wanted sIrreducible_g₂ : (g₂ R).IsIrreducible
+proof_wanted isCrystallographic_g₂ : (g₂ R).IsCrystallographic
+
+-- TODO `EmbeddedG2 (g₂ R)` instance with `long := 0`, `short := 2` (this will give `(g₂ R).IsG2`)
+
+end Concrete
 
 end RootPairing

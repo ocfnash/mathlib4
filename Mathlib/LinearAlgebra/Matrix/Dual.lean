@@ -7,7 +7,7 @@ module
 
 public import Mathlib.LinearAlgebra.DFinsupp
 public import Mathlib.LinearAlgebra.Dual.Basis
-public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.LinearAlgebra.Matrix.ToLinearEquiv
 
 /-!
 # Dual space, linear maps and matrices.
@@ -54,3 +54,19 @@ end Transpose
   invFun f i := f (LinearMap.single R _ i 1)
   left_inv v := by simp
   right_inv f := by ext; simp
+
+namespace Matrix
+
+variable {R n : Type*} [CommRing R] [Fintype n] [DecidableEq n]
+  (M : Matrix n n R) (h : Invertible M)
+
+/-- An invertible matrix gives and equivalence between the space of vectors and its dual. -/
+def piEquivDual : (n → R) ≃ₗ[R] Module.Dual R (n → R) :=
+  (M.toLinearEquiv' h).trans (dotProductEquiv R n)
+
+@[simp] lemma piEquivDual_apply_apply (v w : n → R) :
+    piEquivDual M h v w = w ⬝ᵥ M *ᵥ v := by
+  rw [dotProduct_comm]
+  rfl
+
+end Matrix

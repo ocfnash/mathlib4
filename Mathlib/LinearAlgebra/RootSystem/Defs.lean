@@ -634,6 +634,16 @@ lemma pairing_eq_zero_iff [NeZero (2 : R)] [IsDomain R] [Module.IsTorsionFree R 
   simpa [P.ne_zero i, reflectionPerm_eq_iff_smul_root] using
     P.reflectionPerm_eq_of_pairing_eq_zero' h
 
+lemma pairing_eq_zero_iff_reflectionPerm_eq
+    [NeZero (2 : R)] [IsDomain R] [Module.IsTorsionFree R N] :
+    P.pairing i j = 0 ↔ P.reflectionPerm i j = j := by
+  simp [reflectionPerm_eq_iff_smul_coroot, P.ne_zero' i]
+
+lemma pairing_eq_zero_iff_reflectionPerm_eq'
+    [NeZero (2 : R)] [IsDomain R] [Module.IsTorsionFree R M] :
+    P.pairing i j = 0 ↔ P.reflectionPerm j i = i := by
+  simp [reflectionPerm_eq_iff_smul_root, P.ne_zero j]
+
 lemma pairing_eq_zero_iff' [NeZero (2 : R)] [IsDomain R] :
     P.pairing i j = 0 ↔ P.pairing j i = 0 := by
   have : IsReflexive R M := .of_isPerfPair P.toLinearMap
