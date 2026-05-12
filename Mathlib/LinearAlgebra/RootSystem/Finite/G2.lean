@@ -649,20 +649,22 @@ section Concrete
 variable (R)
 variable [CharZero R]
 
-/-
--- Probably not really the right lemma
-@[simp]
-lemma bar {ι R : Type*} [CommRing R] (f : ι → ℤ) (z : ℤ) :
-    (z : R) • (Int.cast (R := R) ∘ f) = Int.cast ∘ (z • f) := by
-  ext; simp
+open EmbeddedG2 in
+def g₂Z : RootPairing (Fin 12) ℤ (Fin 2 → ℤ) (Fin 2 → ℤ) where
+  __ := !![2, -3; -1, 2].piEquivDual
+    ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
+  root := .trans ⟨allCoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
+  coroot := .trans ⟨allCocoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
+  reflectionPerm := allPerms
+  root_coroot_two i := by fin_cases i <;> decide
+  reflectionPerm_root i j := by fin_cases i <;> fin_cases j <;> decide
+  reflectionPerm_coroot i j := by fin_cases i <;> fin_cases j <;> decide
 
--- Do we really want this? Seems awfully specific.
-lemma baz {ι R : Type*} [AddGroupWithOne R] (f g : ι → ℤ) :
-    Int.cast (R := R) ∘ (f - g) = Int.cast ∘ f - Int.cast ∘ g :=
-  map_comp_sub (Int.castAddHom R) f g
--/
+-- TODO define general-coefficient version via `g₂Z` above + general machinery for extending coeffs
 
--- The proofs below are terrible `decide`-based. Once these are rewritten we can drop this bump.
+#exit
+
+-- The proofs below are terrible. Once these are rewritten we can drop this bump.
 set_option maxHeartbeats 1000000
 
 open EmbeddedG2 in
@@ -672,6 +674,7 @@ def g₂ : RootPairing (Fin 12) R (Fin 2 → R) (Fin 2 → R) where
     ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
   root := .trans ⟨allCoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
   coroot := .trans ⟨allCocoeffs.get, by decide⟩ ⟨_, Int.cast_injective.comp_left⟩
+  reflectionPerm := allPerms
   root_coroot_two i := by
     suffices (↑) ∘ allCocoeffs[i] ⬝ᵥ !![(2 : R), -3; -1, 2].mulVec ((↑) ∘ allCoeffs[i]) = 2 by
       simpa using this
@@ -679,7 +682,6 @@ def g₂ : RootPairing (Fin 12) R (Fin 2 → R) (Fin 2 → R) where
         allCocoeffs[i] ⬝ᵥ !![2, -3; -1, 2].mulVec allCoeffs[i] := by aesop
     rw [this, ← Int.cast_two (R := R), Int.cast_inj]
     fin_cases i <;> decide
-  reflectionPerm := allPerms
   reflectionPerm_root i j := by
     let e := !![(2 : R), -3; -1, 2].piEquivDual
       ⟨!![2, 3; 1, 2], by norm_num [← Matrix.one_fin_two], by norm_num [← Matrix.one_fin_two]⟩
